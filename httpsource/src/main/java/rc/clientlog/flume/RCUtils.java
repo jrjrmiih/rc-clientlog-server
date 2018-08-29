@@ -1,5 +1,6 @@
 package rc.clientlog.flume;
 
+import org.apache.http.util.TextUtils;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -15,46 +16,49 @@ import java.util.zip.GZIPInputStream;
 
 class RCUtils {
 
-    private static final String UNKNOWN= "Unknown";
     private static Logger logger = Logger.getLogger(RCHttpSourceHandler.class);
 
-    static String getTimeRangeInGz(byte[] gzByte) {
+    static String getValidStr(String org, String def) {
+        return TextUtils.isEmpty(org) ? def : org;
+    }
+
+    static String[] getTimeRangeInGz(byte[] gzByte) {
         ByteArrayInputStream in = new ByteArrayInputStream(gzByte);
-        String start = UNKNOWN;
-        String end = UNKNOWN;
+        String start = null;
+        String end = null;
         try {
             GZIPInputStream ungzip = new GZIPInputStream(in);
             InputStreamReader isReader = new InputStreamReader(ungzip);
             BufferedReader bReader = new BufferedReader(isReader);
             String readLine = bReader.readLine();
-            logger.info("startline = " + readLine);
             start = parseTimestamp(readLine);
             String lastLine = null;
             while ((readLine = bReader.readLine()) != null) {
                 lastLine = readLine;
             }
-            logger.info("endline = " + lastLine);
             end = parseTimestamp(lastLine);
-        } catch (IOException e) {
-            logger.info("unzip failed", e);
-            e.printStackTrace();
+        } catch (IOException ex) {
+            logger.error("Unzip failed, file size = " + gzByte.length);
         }
-        return start + "-" + end;
+        return new String[]{start, end};
     }
 
     private static String parseTimestamp(String line) {
-        if (line.isEmpty()) {
+        if (TextUtils.isEmpty(line)) {
             return null;
         }
         String TIME_MARK = "\"time\":";
-        String timeStr = "Unknown";
+        String timeStr = null;
         int start = line.indexOf(TIME_MARK);
         if (start >= 0) {
             start = start + TIME_MARK.length();
             int end = line.indexOf(",", start);
-            if (end >= 0) {
+            if (end >= start) {
                 timeStr = line.substring(start, end);
             }
+        }
+        if (TextUtils.isEmpty(timeStr)) {
+            return null;
         }
 
         if (isRegexMatch(timeStr, "\\d{13}")) {
@@ -88,13 +92,7 @@ class RCUtils {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return UNKNOWN;
-    }
-
-    public static void main(String[] args) {
-        String line = "{\"time\":\"12-27 03:05:22.909\",\"pid\":6912,\"tag\":\"L-ping_pong-S\",\"timer\":150000}";
-        String tm = RCUtils.parseTimestamp(line);
-        System.out.println(tm);
+        return null;
     }
 
     private static String getLogYearStr(String timeStr) {
@@ -110,5 +108,11 @@ class RCUtils {
             logger.error("getLogYearStr() exception! logMonth = " + timeStr.substring(0, 2));
         }
         return String.valueOf(logYear);
+    }
+
+    public static void main(String[] args) {
+        String line = "{\"time\":\"12-27 03:05:22.909\",\"pid\":6912,\"tag\":\"L-ping_pong-S\",\"timer\":150000}";
+        String tm = RCUtils.parseTimestamp(line);
+        System.out.println(tm);
     }
 }
