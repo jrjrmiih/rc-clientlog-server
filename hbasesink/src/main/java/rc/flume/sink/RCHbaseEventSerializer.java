@@ -1,4 +1,4 @@
-package rc.clientlog.flume;
+package rc.flume.sink;
 
 import com.google.common.base.Charsets;
 import org.apache.flume.Context;
@@ -15,8 +15,6 @@ import java.util.List;
 import java.util.Map;
 
 public class RCHbaseEventSerializer implements HbaseEventSerializer {
-
-    private static final String NULL = "NULL";
 
     private static final String HEADER_APP_KEY = "RC-App-Key";
     private static final String HEADER_USER_ID = "RC-User-ID";
@@ -80,13 +78,13 @@ public class RCHbaseEventSerializer implements HbaseEventSerializer {
     }
 
     private String getTimeStr(String timestamp) {
-        return timestamp.equals(NULL) ? timestamp : timestamp.substring(0, 10);
+        return timestamp != null ? timestamp.substring(0, 10) : null;
     }
 
     private String getSaltStr(String appKey, String userId) {
-        if (userId.equals(NULL)) {
+        if (userId == null) {
             String now = String.valueOf(System.currentTimeMillis());
-            return MD5Hash.getMD5AsHex((appKey + userId + now).getBytes()).substring(0, 4);
+            return MD5Hash.getMD5AsHex((appKey + now).getBytes()).substring(0, 4);
         } else {
             return MD5Hash.getMD5AsHex((appKey + userId).getBytes()).substring(0, 4);
         }

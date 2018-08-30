@@ -1,4 +1,4 @@
-package rc.clientlog.flume;
+package rc.flume.source;
 
 import org.apache.http.util.TextUtils;
 import org.apache.log4j.Logger;
@@ -16,7 +16,7 @@ import java.util.zip.GZIPInputStream;
 
 class RCUtils {
 
-    private static Logger logger = Logger.getLogger(RCHttpSourceHandler.class);
+    private static Logger logger = Logger.getLogger(RCUtils.class);
 
     static String getValidStr(String org, String def) {
         return TextUtils.isEmpty(org) ? def : org;
@@ -110,9 +110,9 @@ class RCUtils {
         return String.valueOf(logYear);
     }
 
-    public static void main(String[] args) {
-        String line = "{\"time\":\"12-27 03:05:22.909\",\"pid\":6912,\"tag\":\"L-ping_pong-S\",\"timer\":150000}";
-        String tm = RCUtils.parseTimestamp(line);
-        System.out.println(tm);
-    }
+//    public static void main(String[] args) {
+//        String line = "{\"time\":\"12-27 03:05:22.909\",\"pid\":6912,\"tag\":\"L-ping_pong-S\",\"timer\":150000}";
+//        String tm = RCUtils.parseTimestamp(line);
+//        System.out.println(tm);
+//    }
 }
