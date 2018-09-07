@@ -9,6 +9,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.util.MD5Hash;
+import org.apache.log4j.Logger;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -28,6 +29,8 @@ public class RCHbaseEventSerializer implements HbaseEventSerializer {
     private static final byte[] QF_PLATFORM = "platform".getBytes(Charsets.UTF_8);
     private static final byte[] QF_SDK_VER = "sdk_ver".getBytes(Charsets.UTF_8);
     private static final byte[] QF_USER_IP = "user_ip".getBytes(Charsets.UTF_8);
+
+    private static final Logger logger = Logger.getLogger(RCHbaseEventSerializer.class);
 
     private Event event;
     private byte[] cf;
@@ -67,7 +70,7 @@ public class RCHbaseEventSerializer implements HbaseEventSerializer {
 
     private byte[] getRowKey(Map<String, String> header) {
         String appKey = header.get(HEADER_APP_KEY);
-        String userId = header.get(HEADER_USER_ID).isEmpty() ? "null" : header.get(HEADER_USER_ID);
+        String userId = header.get(HEADER_USER_ID);
         String startTime = getTimeStr(header.get(HEADER_START_TIME));
         String endTime = getTimeStr(header.get(HEADER_END_TIME));
         String salt = getSaltStr(appKey, userId);
@@ -78,11 +81,16 @@ public class RCHbaseEventSerializer implements HbaseEventSerializer {
     }
 
     private String getTimeStr(String timestamp) {
-        return timestamp != null ? timestamp.substring(0, 10) : null;
+        if (timestamp == null || timestamp.length() == 0) return "";
+        if (timestamp.length() < 10) {
+            logger.error("timstamp length error = " + timestamp);
+            return "";
+        }
+        return timestamp.substring(0, 10);
     }
 
     private String getSaltStr(String appKey, String userId) {
-        if (userId == null) {
+        if (userId.equals("")) {
             String now = String.valueOf(System.currentTimeMillis());
             return MD5Hash.getMD5AsHex((appKey + now).getBytes()).substring(0, 4);
         } else {

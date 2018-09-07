@@ -2,6 +2,7 @@ package rc.flume.source;
 
 
 import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileUploadBase;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.flume.Context;
@@ -12,14 +13,9 @@ import org.apache.flume.source.http.HTTPSourceHandler;
 import org.apache.log4j.Logger;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class RCLogHttpSrc implements HTTPSourceHandler {
-
-    private static Logger logger = Logger.getLogger(RCLogHttpSrc.class);
 
     private static final String APP_KEY = "RC-App-Key";
     private static final String USER_ID = "RC-User-ID";
@@ -29,7 +25,9 @@ public class RCLogHttpSrc implements HTTPSourceHandler {
     private static final String END_TIME = "RC-End-Time";
     private static final String USER_IP = "RC-User-IP";
     private static final String X_Real_IP = "X-Real-IP";
-    
+
+    private static final Logger logger = Logger.getLogger(RCLogHttpSrc.class);
+
     public void configure(Context context) {
     }
 
@@ -46,33 +44,20 @@ public class RCLogHttpSrc implements HTTPSourceHandler {
         String xRealIp = request.getHeader(X_Real_IP);
         String remoteAddr = request.getRemoteAddr();
         String userIp = xRealIp == null ? remoteAddr : xRealIp;
-        headerMap.put(USER_IP, userIp);
-        headerMap.put(APP_KEY, appKey);
-        headerMap.put(USER_ID, userId);
-        headerMap.put(SDK_VERSION, sdkVer);
-        headerMap.put(PLATFORM, platform);
+        headerMap.put(USER_IP, userIp == null ? "" : userIp);
+        headerMap.put(APP_KEY, appKey == null ? "" : appKey);
+        headerMap.put(USER_ID, userId == null ? "" : userId);
+        headerMap.put(SDK_VERSION, sdkVer == null ? "" : sdkVer);
+        headerMap.put(PLATFORM, platform == null ? "" : platform);
 
         List<Event> eventList = new ArrayList<Event>();
-        ServletFileUpload upload = new ServletFileUpload(new DiskFileItemFactory());
-        List<FileItem> items = upload.parseRequest(request);
-        for (FileItem fileItem : items) {
-            String[] timeRange = RCUtils.getTimeRangeInGz(fileItem.get());
-            headerMap.put(START_TIME, timeRange[0]);
-            headerMap.put(END_TIME, timeRange[1]);
-            checkValidity(headerMap);
-            eventList.add(EventBuilder.withBody(fileItem.get(), headerMap));
+        if (request.getMethod().equals("POST")) {
+            ServletFileUpload upload = new ServletFileUpload(new DiskFileItemFactory());
+            List<FileItem> items = upload.parseRequest(request);
+            for (FileItem fileItem : items) {
+                eventList.add(EventBuilder.withBody(fileItem.get(), headerMap));
+            }
         }
         return eventList;
     }
-
-    private void checkValidity(Map<String, String> headerMap) {
-        if (headerMap.get(USER_ID) == null) {
-            String platform = headerMap.get(PLATFORM);
-            String sdkVer = headerMap.get(SDK_VERSION);
-            logger.error("User ID not valid: " + platform + "_" + sdkVer);
-        }
-    }
-
-//    public static void main(String[] args) {
-//    }
 }
