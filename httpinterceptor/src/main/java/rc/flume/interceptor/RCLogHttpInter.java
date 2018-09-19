@@ -12,18 +12,20 @@ import java.util.Map;
 
 public class RCLogHttpInter implements Interceptor {
 
-    private static final String APP_KEY = "RC-App-Key";
-    private static final String USER_ID = "RC-User-ID";
-    private static final String SDK_VERSION = "RC-SDK-Version";
-    private static final String PLATFORM = "RC-Platform";
-    private static final String START_TIME = "RC-Start-Time";
-    private static final String END_TIME = "RC-End-Time";
-    private static final String USER_IP = "RC-User-IP";
+    private static final String HEADER_APP_KEY = "AppKey";
+    private static final String HEADER_USER_ID = "UserId";
+    private static final String HEADER_SDK_VER = "SdkVer";
+    private static final String HEADER_PLATFORM = "Platform";
+    private static final String HEADER_USER_IP = "UserIp";
+    private static final String HEADER_START_TIME = "Start";
+    private static final String HEADER_END_TIME = "End";
 
     private static final String MINI_SDK_VER = "2.8.10";
-
+    private static final String PLATFORM_ANDROID = "Android";
+    private static final String PLATFORM_IOS = "iOS";
     private static final Logger logger = Logger.getLogger(RCLogHttpInter.class);
 
+    private static String latestSdkVer;
     private RCHttpInterCounter httpInterCount;
 
     public void initialize() {
@@ -33,19 +35,49 @@ public class RCLogHttpInter implements Interceptor {
 
     public Event intercept(Event event) {
         Map<String, String> headers = event.getHeaders();
-        String sdkVer = headers.get(SDK_VERSION);
-        if (sdkVer == null) {
+        String sdkVer = headers.get(HEADER_SDK_VER);
+        String platform = headers.get(HEADER_PLATFORM);
+        if (!platform.equals(PLATFORM_ANDROID) && !platform.equals(PLATFORM_IOS)) {
+            httpInterCount.incrementPlatformNullCount();
+        } else if (sdkVer.equals("")) {
             httpInterCount.incrementSdkVerNullCount();
         } else if (RCUtils.compareVer(sdkVer, MINI_SDK_VER) < 0) {
             httpInterCount.incrementSdkVerOlderCount();
+        } else if (headers.get(HEADER_USER_ID).equals("")) {
+            if (sdkVer.equals(latestSdkVer)) {
+                if (platform.equals(PLATFORM_ANDROID)) {
+                    httpInterCount.incrementLatestAndroidTimeFailedCount();
+                } else {
+                    httpInterCount.incrementLatestIosTimeFailedCount();
+                }
+            }
+            httpInterCount.incrementUserIdNullCount();
         } else {
             try {
                 String[] timeRange = RCUtils.getTimeRangeInGz(event.getBody());
-                headers.put(START_TIME, timeRange[0] == null ? "" : timeRange[0]);
-                headers.put(END_TIME, timeRange[1] == null ? "" : timeRange[1]);
-                event.setHeaders(headers);
-                return event;
+                if (timeRange[0] == null || timeRange[1] == null) {
+                    if (sdkVer.equals(latestSdkVer)) {
+                        if (platform.equals(PLATFORM_ANDROID)) {
+                            httpInterCount.incrementLatestAndroidTimeFailedCount();
+                        } else {
+                            httpInterCount.incrementLatestIosTimeFailedCount();
+                        }
+                    }
+                    httpInterCount.incrementTimeFailedCount();
+                } else {
+                    headers.put(HEADER_START_TIME, timeRange[0]);
+                    headers.put(HEADER_END_TIME, timeRange[1]);
+                    event.setHeaders(headers);
+                    return event;
+                }
             } catch (IOException e) {
+                if (sdkVer.equals(latestSdkVer)) {
+                    if (platform.equals(PLATFORM_ANDROID)) {
+                        httpInterCount.incrementLatestAndroidUnzipFailedCount();
+                    } else {
+                        httpInterCount.incrementLatestIosUnzipFailedCount();
+                    }
+                }
                 httpInterCount.incrementUnzipFailedCount();
             }
         }
@@ -69,11 +101,14 @@ public class RCLogHttpInter implements Interceptor {
 
     public static class Builder implements Interceptor.Builder {
 
+        private static final String LATEST_SDK_VER = "latestsdkver";
+
         public Interceptor build() {
             return new RCLogHttpInter();
         }
 
         public void configure(Context context) {
+            latestSdkVer = context.getString(LATEST_SDK_VER);
         }
     }
 }
