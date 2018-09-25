@@ -77,9 +77,8 @@ class RCUtils {
             timeStr = timeStr.substring(1, timeStr.length() - 1);
             timeStr = getLogYearStr(timeStr) + "-" + timeStr;
             return date2Timestamp(timeStr, "yy-MM-dd HH:mm:ss.SSS");
-        } else {
-            return timeStr;
         }
+        return null;
     }
 
     private static boolean isRegexMatch(String content, String regex) {

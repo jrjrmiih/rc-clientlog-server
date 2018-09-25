@@ -9,6 +9,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.MD5Hash;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -34,7 +35,7 @@ public class RCHbaseLogDataSer implements HbaseEventSerializer {
 
     private static final int SALT_LEN = 2;
     private static final String TABLE_SUM = "logsum";
-//    private static final Logger logger = Logger.getLogger(RCHbaseLogDataSer.class);
+    private static final Logger logger = Logger.getLogger(RCHbaseLogDataSer.class);
 
     private Table logSum;
     private Event event;
