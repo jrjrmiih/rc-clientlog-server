@@ -1,5 +1,6 @@
 package rc.flume.interceptor;
 
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -11,7 +12,6 @@ import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPInputStream;
 
 class RCUtils {
 
@@ -34,7 +34,7 @@ class RCUtils {
 
     static String[] getTimeRangeInGz(byte[] gzByte) throws IOException {
         ByteArrayInputStream in = new ByteArrayInputStream(gzByte);
-        GZIPInputStream ungzip = new GZIPInputStream(in);
+        GzipCompressorInputStream ungzip = new GzipCompressorInputStream(in);
         InputStreamReader isReader = new InputStreamReader(ungzip);
         BufferedReader bReader = new BufferedReader(isReader);
         String readLine = bReader.readLine();
