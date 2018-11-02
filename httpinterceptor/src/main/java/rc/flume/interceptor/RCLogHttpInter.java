@@ -12,19 +12,19 @@ import java.util.Map;
 
 public class RCLogHttpInter implements Interceptor {
 
-    private static final String HEADER_APP_KEY = "AppKey";
-    private static final String HEADER_USER_ID = "UserId";
-    private static final String HEADER_SDK_VER = "SdkVer";
-    private static final String HEADER_PLATFORM = "Platform";
-    private static final String HEADER_USER_IP = "UserIp";
-    private static final String HEADER_START_TIME = "Start";
-    private static final String HEADER_END_TIME = "End";
+    private static final String HEADER_APP_KEY = "aid";
+    private static final String HEADER_USER_ID = "uid";
+    private static final String HEADER_SDK_VER = "ver";
+    private static final String HEADER_PLATFORM = "os";
+    private static final String HEADER_USER_IP = "uip";
+    private static final String HEADER_START_TIME = "st";
+    private static final String HEADER_END_TIME = "et";
 
-    private static final String MINI_SDK_VER = "2.8.10";
     private static final String PLATFORM_ANDROID = "Android";
     private static final String PLATFORM_IOS = "iOS";
     private static final Logger logger = Logger.getLogger(RCLogHttpInter.class);
 
+    private static String miniSdkVer;
     private static String latestSdkVer;
     private RCHttpInterCounter httpInterCount;
 
@@ -37,12 +37,12 @@ public class RCLogHttpInter implements Interceptor {
         Map<String, String> headers = event.getHeaders();
         String sdkVer = headers.get(HEADER_SDK_VER);
         String platform = headers.get(HEADER_PLATFORM);
-        if (!platform.equals(PLATFORM_ANDROID) && !platform.equals(PLATFORM_IOS)) {
+        if (RCUtils.compareVer(sdkVer, miniSdkVer) < 0) {
+            httpInterCount.incrementSdkVerOlderCount();
+        } else if (!platform.equals(PLATFORM_ANDROID) && !platform.equals(PLATFORM_IOS)) {
             httpInterCount.incrementPlatformNullCount();
         } else if (sdkVer.equals("")) {
             httpInterCount.incrementSdkVerNullCount();
-        } else if (RCUtils.compareVer(sdkVer, MINI_SDK_VER) < 0) {
-            httpInterCount.incrementSdkVerOlderCount();
         } else if (headers.get(HEADER_USER_ID).equals("")) {
             if (sdkVer.equals(latestSdkVer)) {
                 if (platform.equals(PLATFORM_ANDROID)) {
@@ -101,6 +101,7 @@ public class RCLogHttpInter implements Interceptor {
 
     public static class Builder implements Interceptor.Builder {
 
+        private static final String MINI_SDK_VER = "minisdkver";
         private static final String LATEST_SDK_VER = "latestsdkver";
 
         public Interceptor build() {
@@ -108,6 +109,7 @@ public class RCLogHttpInter implements Interceptor {
         }
 
         public void configure(Context context) {
+            miniSdkVer = context.getString(MINI_SDK_VER);
             latestSdkVer = context.getString(LATEST_SDK_VER);
         }
     }

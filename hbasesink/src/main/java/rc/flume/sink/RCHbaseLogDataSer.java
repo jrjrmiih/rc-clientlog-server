@@ -4,52 +4,33 @@ import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.conf.ComponentConfiguration;
 import org.apache.flume.sink.hbase.HbaseEventSerializer;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.util.MD5Hash;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.log4j.Logger;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class RCHbaseLogDataSer implements HbaseEventSerializer {
 
-    private static final String HEADER_APP_KEY = "AppKey";
-    private static final String HEADER_USER_ID = "UserId";
-    private static final String HEADER_SDK_VER = "SdkVer";
-    private static final String HEADER_PLATFORM = "Platform";
-    private static final String HEADER_USER_IP = "UserIp";
-    private static final String HEADER_START_TIME = "Start";
-    private static final String HEADER_END_TIME = "End";
+    private static final String HEADER_APP_KEY = "aid";
+    private static final String HEADER_USER_ID = "uid";
+    private static final String HEADER_SDK_VER = "ver";
+    private static final String HEADER_PLATFORM = "os";
+    private static final String HEADER_USER_IP = "uip";
+    private static final String HEADER_START_TIME = "st";
+    private static final String HEADER_END_TIME = "et";
 
     private static final byte[] QF_GZ = "gz".getBytes();
     private static final byte[] QF_OS = "os".getBytes();
     private static final byte[] QF_VER = "ver".getBytes();
     private static final byte[] QF_IP = "ip".getBytes();
 
-    private static final int SALT_LEN = 2;
-    private static final String TABLE_SUM = "logsum";
     private static final Logger logger = Logger.getLogger(RCHbaseLogDataSer.class);
 
-    private Table logSum;
     private Event event;
     private byte[] cf;
-
-    public RCHbaseLogDataSer() {
-        try {
-            Configuration config = HBaseConfiguration.create();
-            Connection conn = ConnectionFactory.createConnection(config);
-            logSum = conn.getTable(TableName.valueOf(TABLE_SUM));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     public void initialize(Event event, byte[] cf) {
         this.event = event;
@@ -69,17 +50,16 @@ public class RCHbaseLogDataSer implements HbaseEventSerializer {
     }
 
     public List<Increment> getIncrements() {
-        Map<String, String> header = event.getHeaders();
-        Increment inc = new Increment(getSumRowKey(header));
-        String platform = header.get(HEADER_PLATFORM);
-        String sdkVer = header.get(HEADER_SDK_VER);
-        inc.addColumn("sum".getBytes(), (platform + "_" + sdkVer).getBytes(), 1L);
-        try {
-            logSum.increment(inc);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return new LinkedList<Increment>();
+//        List<Increment> increments = new ArrayList<Increment>();
+//        Map<String, String> header = event.getHeaders();
+//        Increment inc = new Increment(header.get(HEADER_APP_KEY).getBytes());
+//        String date = timestamp2Date(header.get(HEADER_START_TIME));
+//        String platform = header.get(HEADER_PLATFORM);
+//        String sdkVer = header.get(HEADER_SDK_VER);
+//        inc.addColumn("sum".getBytes(), (date + "^" + platform + "^" + sdkVer).getBytes(), 1L);
+//        increments.add(inc);
+//        return increments;
+        return new ArrayList<Increment>();
     }
 
     public void close() {
@@ -99,24 +79,18 @@ public class RCHbaseLogDataSer implements HbaseEventSerializer {
         String userId = header.get(HEADER_USER_ID);
         String startTime = header.get(HEADER_START_TIME);
         String endTime = header.get(HEADER_END_TIME);
-        String salt = getSaltStr(appKey, userId);
-        return (salt + "^" + appKey + "^" + userId + "^" + startTime + "^" + endTime).getBytes();
+//        String salt = getSaltStr(appKey, userId);
+        return (appKey + "^" + userId + "^" + startTime + "^" + endTime).getBytes();
     }
 
     private String getSaltStr(String appKey, String userId) {
-        if (userId.equals("")) {
-            String now = String.valueOf(System.currentTimeMillis());
-            return MD5Hash.getMD5AsHex((appKey + now).getBytes()).substring(0, SALT_LEN);
-        } else {
-            return MD5Hash.getMD5AsHex((appKey + userId).getBytes()).substring(0, SALT_LEN);
+        String salt = null;
+        try {
+            salt = userId.substring(userId.length() - 1) + appKey.substring(appKey.length() - 1);
+        } catch (StringIndexOutOfBoundsException e) {
+            logger.error("userId = " + userId + "; appKey = " + appKey, e);
         }
-    }
-
-    private byte[] getSumRowKey(Map<String, String> header) {
-        String appKey = header.get(HEADER_APP_KEY);
-        String startTime = header.get(HEADER_START_TIME);
-        String date = timestamp2Date(startTime);
-        return (appKey + "_" + date).getBytes();
+        return salt == null ? "" : salt;
     }
 
     private static String timestamp2Date(String timestamp) {
