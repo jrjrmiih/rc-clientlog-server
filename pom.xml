@@ -4,21 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>cn.rongcloud.www</groupId>
-    <artifactId>clientlog-flume</artifactId>
+    <groupId>rc.clientlog.server</groupId>
+    <artifactId>clientlog-server</artifactId>
     <packaging>pom</packaging>
     <version>1.0</version>
-    <modules>
-        <module>httpsource</module>
-        <module>hbasesink</module>
-        <module>httpinterceptor</module>
-    </modules>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.apache.flume</groupId>
-            <artifactId>flume-ng-core</artifactId>
-            <version>1.8.0</version>
-        </dependency>
-    </dependencies>
+    <modules>
+        <module>flume</module>
+        <module>hbase</module>
+    </modules>
 </project>
