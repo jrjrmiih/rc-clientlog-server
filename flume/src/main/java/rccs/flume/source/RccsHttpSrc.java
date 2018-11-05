@@ -34,7 +34,6 @@ public class RccsHttpSrc implements HTTPSourceHandler {
     private static final String HEADER_USER_IP = "uip";
 
     private static final int MAX_CONTENT_LEN = 1024 * 1024;
-
     private static final Logger logger = Logger.getLogger(RccsHttpSrc.class);
 
     public void configure(Context context) {
@@ -71,7 +70,7 @@ public class RccsHttpSrc implements HTTPSourceHandler {
                 } catch (FileUploadException ignored) {
                 }
             } else {
-                logger.warn("RcLog: content over length - " + conLen);
+                logger.warn("content over length: " + conLen + ", PlatVer = " + platform + "_" + sdkVer);
             }
         }
         return eventList;

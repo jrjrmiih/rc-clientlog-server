@@ -2,6 +2,7 @@ package rccs.flume.source;
 
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -17,7 +18,7 @@ class RccsHttpInterUtils {
 
     private static Logger logger = Logger.getLogger(RccsHttpInterUtils.class);
 
-    static int compareVer(String sdkVer, String minVer) {
+    static int compareVer(@NotNull String sdkVer, @NotNull String minVer) {
         String[] sdkVers = sdkVer.split("\\.");
         String[] minVers = minVer.split("\\.");
         int idx = 0;
@@ -98,7 +99,7 @@ class RccsHttpInterUtils {
         return null;
     }
 
-    private static String getLogYearStr(String timeStr) {
+    private static String getLogYearStr(@NotNull String timeStr) {
         Calendar calendar = Calendar.getInstance();
         int logYear = calendar.get(Calendar.YEAR);
         try {
@@ -112,7 +113,4 @@ class RccsHttpInterUtils {
         }
         return String.valueOf(logYear);
     }
-
-//    public static void main(String[] args) {
-//    }
 }

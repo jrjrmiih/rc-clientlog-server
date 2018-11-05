@@ -4,7 +4,6 @@ import com.google.common.collect.Lists;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.interceptor.Interceptor;
-import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.List;
@@ -12,17 +11,16 @@ import java.util.Map;
 
 public class RccsHttpItcptor implements Interceptor {
 
-    private static final String HEADER_APP_KEY = "aid";
+//    private static final String HEADER_APP_KEY = "aid";
     private static final String HEADER_USER_ID = "uid";
     private static final String HEADER_SDK_VER = "ver";
     private static final String HEADER_PLATFORM = "os";
-    private static final String HEADER_USER_IP = "uip";
+//    private static final String HEADER_USER_IP = "uip";
     private static final String HEADER_START_TIME = "st";
     private static final String HEADER_END_TIME = "et";
 
     private static final String PLATFORM_ANDROID = "Android";
     private static final String PLATFORM_IOS = "iOS";
-    private static final Logger logger = Logger.getLogger(RccsHttpItcptor.class);
 
     private static String miniSdkVer;
     private static String latestSdkVer;
