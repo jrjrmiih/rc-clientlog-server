@@ -12,10 +12,7 @@ import org.apache.flume.source.http.HTTPSourceHandler;
 import org.apache.log4j.Logger;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class RccsHttpSrc implements HTTPSourceHandler {
 
@@ -23,7 +20,7 @@ public class RccsHttpSrc implements HTTPSourceHandler {
     private static final String RC_USER_ID = "RC-User-ID";
     private static final String RC_SDK_VERSION = "RC-SDK-Version";
     private static final String RC_PLATFORM = "RC-Platform";
-//    private static final String RC_START_TIME = "RC-Start-Time";
+    //    private static final String RC_START_TIME = "RC-Start-Time";
 //    private static final String RC_END_TIME = "RC-End-Time";
     private static final String X_FORWARDED_FOR = "X-Forwarded-For";
 
@@ -40,11 +37,27 @@ public class RccsHttpSrc implements HTTPSourceHandler {
     }
 
     public List<Event> getEvents(HttpServletRequest request) {
+        List<Event> eventList = new ArrayList<Event>();
+        if (!request.getMethod().equals("POST")) {
+            return eventList;
+        }
+
         Map<String, String> headerMap = new HashMap<String, String>();
         String userIp = request.getHeader(X_FORWARDED_FOR);
-        int pos = userIp.indexOf(",");
-        if (pos > 0) {
-            userIp = userIp.substring(0, pos);
+        if (userIp == null) {
+            logger.error("User Ip is null.");
+            Enumeration headerNames = request.getHeaderNames();
+            while (headerNames.hasMoreElements()) {
+                String key = (String) headerNames.nextElement();
+                String value = request.getHeader(key);
+                logger.info("Header list: key = " + key + ", value = " + value);
+            }
+            userIp = "";
+        } else {
+            int pos = userIp.indexOf(",");
+            if (pos > 0) {
+                userIp = userIp.substring(0, pos);
+            }
         }
         String appKey = request.getHeader(RC_APP_KEY);
         String userId = request.getHeader(RC_USER_ID);
@@ -57,21 +70,18 @@ public class RccsHttpSrc implements HTTPSourceHandler {
         headerMap.put(HEADER_SDK_VER, sdkVer == null ? "" : sdkVer);
         headerMap.put(HEADER_PLATFORM, platform == null ? "" : platform);
 
-        List<Event> eventList = new ArrayList<Event>();
-        if (request.getMethod().equals("POST")) {
-            int conLen = request.getContentLength();
-            if (conLen < MAX_CONTENT_LEN) {
-                ServletFileUpload upload = new ServletFileUpload(new DiskFileItemFactory());
-                try {
-                    List<FileItem> items = upload.parseRequest(request);
-                    for (FileItem fileItem : items) {
-                        eventList.add(EventBuilder.withBody(fileItem.get(), headerMap));
-                    }
-                } catch (FileUploadException ignored) {
+        int conLen = request.getContentLength();
+        if (conLen < MAX_CONTENT_LEN) {
+            ServletFileUpload upload = new ServletFileUpload(new DiskFileItemFactory());
+            try {
+                List<FileItem> items = upload.parseRequest(request);
+                for (FileItem fileItem : items) {
+                    eventList.add(EventBuilder.withBody(fileItem.get(), headerMap));
                 }
-            } else {
-                logger.warn("content over length: " + conLen + ", PlatVer = " + platform + "_" + sdkVer);
+            } catch (FileUploadException ignored) {
             }
+        } else {
+            logger.warn("Content over length: " + conLen + ", PlatVer = " + platform + "_" + sdkVer);
         }
         return eventList;
     }

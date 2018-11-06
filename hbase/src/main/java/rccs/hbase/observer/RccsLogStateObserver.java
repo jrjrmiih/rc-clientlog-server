@@ -68,7 +68,7 @@ public class RccsLogStateObserver extends BaseRegionObserver {
     }
 
     public static void main(String[] args) {
-        System.out.println("asdfoe".hashCode());
+        System.out.println("asdfo3".hashCode());
     }
 
     public void doStart() throws IOException {
