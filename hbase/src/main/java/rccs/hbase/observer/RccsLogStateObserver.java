@@ -50,7 +50,7 @@ public class RccsLogStateObserver extends BaseRegionObserver {
         doPrePut(put);
     }
 
-    static String timestamp2Date(String timestamp) {
+    static String timestamp2Date(String timestamp) throws NumberFormatException {
         SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
         return sdf.format(new Date(Long.valueOf(timestamp + "000")));
     }

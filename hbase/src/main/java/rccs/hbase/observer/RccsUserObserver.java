@@ -39,8 +39,15 @@ public class RccsUserObserver extends BaseRegionObserver {
         String[] split = new String(put.getRow()).split("\\^");
         String appKey = split[1];
         String userId = split[2];
-        String dayStart = RccsLogStateObserver.timestamp2Date(split[3]);
-        String dayEnd = RccsLogStateObserver.timestamp2Date(split[4]);
+        String dayStart;
+        String dayEnd;
+        try {
+            dayStart = RccsLogStateObserver.timestamp2Date(split[3]);
+            dayEnd = RccsLogStateObserver.timestamp2Date(split[4]);
+        } catch (NumberFormatException exp) {
+            logger.error("RYM_DG, rowKey = " + new String(put.getRow()));
+            return;
+        }
 
         long size = 0;
         if (isValidTime(split[3])) {

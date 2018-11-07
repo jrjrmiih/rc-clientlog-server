@@ -3,9 +3,11 @@ package rccs.restful;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TimeZone;
 
-public class LogUtils {
+public class LogRestCommon {
 
     /**
      * 获取指定格式的 UTC 10位时间戳。
@@ -21,10 +23,5 @@ public class LogUtils {
 
     public static void main(String[] args) {
         HbaseConnection conn = HbaseConnection.getInstance();
-        try {
-            conn.getLogTest("e5t4ouvpt9eza");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 }

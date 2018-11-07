@@ -1,14 +1,14 @@
 package rccs.restful;
 
+import com.google.gson.Gson;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.filter.*;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.jetbrains.annotations.NotNull;
 
-import javax.validation.constraints.NotNull;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,11 +17,16 @@ import java.util.zip.GZIPInputStream;
 
 public class HbaseConnection {
 
-    private static final String T_CLIENTLOG = "clientlog";
-    private static final int BUFFER_LEN = 1024 * 1024;
-    private static final int SHOW_MAX_LEN = 2 * 1024 * 1024;
+    private static final int BUFFER_LEN = 10 * 1024;
+    private static final int MAX_LOG_LENGTH = 1024 * 1024;
 
-    private Table clientlog;
+    private static final String T_CLIENTLOG = "clientlog";
+    private static final byte[] CF_DATA = "data".getBytes();
+    private static final byte[] CQ_OS = "os".getBytes();
+    private static final byte[] CQ_VER = "ver".getBytes();
+    private static final byte[] CQ_IP = "ip".getBytes();
+
+    private Table tClientLog;
 
     private static class SingletonHolder {
         private static final HbaseConnection INSTANCE = new HbaseConnection();
@@ -30,9 +35,8 @@ public class HbaseConnection {
     private HbaseConnection() {
         try {
             Configuration conf = HBaseConfiguration.create();
-//            conf.set("hbase.zookeeper.quorum", "192.168.1.100");
             Connection conn = ConnectionFactory.createConnection(conf);
-            clientlog = conn.getTable(TableName.valueOf(T_CLIENTLOG));
+            tClientLog = conn.getTable(TableName.valueOf(T_CLIENTLOG));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -43,94 +47,58 @@ public class HbaseConnection {
     }
 
     /**
-     * 获取指定 appKey，userId 指定时间范围的日志。
-     *
-     * @param tarStart 起始时间。
-     * @param tarEnd   结束时间。
-     * @return 用户日志，如遇意外则返回 null。
+     * @param aid AppKey
+     * @param uid UserId
+     * @return Json string of log info list.
+     * @throws IOException if HBase encounter problems.
      */
-    String getLog(String appKey, String userId, String tarStart, String tarEnd) throws IOException {
-        if (appKey == null || userId == null) {
-            return null;
-        }
-
-        String rowPrefix = appKey + "^" + userId + "^";
-        StringBuilder logSb = new StringBuilder(BUFFER_LEN);
+    String getLogInfo(@NotNull String aid, @NotNull String uid) throws IOException {
+        String rowPrefix = getSaltStr(uid) + "^" + aid + "^" + uid + "^";
         Scan scan = new Scan();
         scan.setRowPrefixFilter(rowPrefix.getBytes());
         scan.setFilter(new PrefixFilter(rowPrefix.getBytes()));
-        ResultScanner results = clientlog.getScanner(scan);
+        ResultScanner results = tClientLog.getScanner(scan);
+        List<LogRecord> recordList = new ArrayList<>();
         for (Result res : results) {
-            String[] keys = new String(res.getRow()).split("\\^");
-            String start = keys[3];
-            String end = keys[4];
-            if ((tarStart == null || tarEnd == null) || (start.compareTo(tarEnd) < 0 && end.compareTo(tarStart) > 0)) {
-                byte[] gzByte = res.getValue("data".getBytes(), "gz".getBytes());
-                GZIPInputStream unGZip = new GZIPInputStream(new ByteArrayInputStream(gzByte));
-                byte[] buffer = new byte[1024];
-                int ret;
-                while ((ret = unGZip.read(buffer)) > 0) {
-                    logSb.append(new String(buffer, 0, ret));
-                }
-                if (logSb.length() > SHOW_MAX_LEN) {
-                    logSb.append("... Too many logs, please narrow down the search ...");
-                    break;
-                }
-            }
+            String[] split = new String(res.getRow()).split("\\^");
+            LogRecord log = new LogRecord(split[1], split[2], Long.parseLong(split[3]), Long.parseLong(split[4]));
+            log.setOs(Bytes.toString(res.getValue(CF_DATA, CQ_OS)));
+            log.setVer(Bytes.toString(res.getValue(CF_DATA, CQ_VER)));
+            log.setIp(Bytes.toString(res.getValue(CF_DATA, CQ_IP)));
+            recordList.add(log);
         }
-        return logSb.length() > 0 ? logSb.toString() : null;
+        return new Gson().toJson(recordList);
     }
 
-    void getLogTest(String appKey) throws IOException {
-        System.out.println("start = " + System.currentTimeMillis());
-        String subKey = "^" + appKey + "^";
-        RowFilter rowFilter = new RowFilter(CompareFilter.CompareOp.EQUAL, new SubstringComparator(subKey));
-        Scan scan = new Scan();
-        scan.setFilter(rowFilter);
-        ResultScanner results = clientlog.getScanner(scan);
-        System.out.println("mid = " + System.currentTimeMillis());
-        int i = 0;
-        for (Result res : results) {
-            if (i++ % 1000 == 0) {
-                System.out.println("count = " + i);
-            }
-        }
-        System.out.println("end = " + System.currentTimeMillis());
-    }
+    /**
+     * Get log data from specific one record.
+     *
+     * @param aid   AppKey
+     * @param uid   UserId
+     * @param start StartTime。
+     * @param end   EndTime。
+     * @return String of the log data.
+     */
+    String getLogData(@NotNull String aid, @NotNull String uid, @NotNull String start, @NotNull String end)
+            throws IOException {
+        String rowKey = getSaltStr(uid) + "^" + aid + "^" + uid + "^" + start + "^" + end;
+        Get get = new Get(rowKey.getBytes());
+        Result res = tClientLog.get(get);
 
-    String getSum() throws IOException {
-        Scan scan = new Scan();
-        ResultScanner results = clientlog.getScanner(scan);
-        long sum = 0;
-        for (Result res : results) {
-            for (Cell cell : res.rawCells()) {
-                long count = Bytes.toLong(cell.getRowArray(), cell.getValueOffset(), cell.getValueLength());
-                sum += count;
-            }
-        }
-        return String.valueOf(sum);
-    }
+        byte[] gzByte = res.getValue("data".getBytes(), "gz".getBytes());
+        GZIPInputStream unGZip = new GZIPInputStream(new ByteArrayInputStream(gzByte));
 
-    int delSum() {
-        int total;
-        String rowPrefix = "sum_";
-        Filter filter = new PrefixFilter(rowPrefix.getBytes());
-        Scan scan = new Scan();
-        scan.withStartRow(rowPrefix.getBytes());
-        scan.setFilter(filter);
-        try (ResultScanner results = clientlog.getScanner(scan)) {
-            List<Delete> delList = new ArrayList<>();
-            for (Result res : results) {
-                Delete del = new Delete(res.getRow());
-                delList.add(del);
+        byte[] buffer = new byte[1024];
+        StringBuilder logSb = new StringBuilder(BUFFER_LEN);
+        int ret;
+        while ((ret = unGZip.read(buffer)) > 0) {
+            logSb.append(new String(buffer, 0, ret));
+            if (logSb.length() > MAX_LOG_LENGTH) {
+                logSb.append("... Too many logs, please contact administrator for help ...");
+                break;
             }
-            total = delList.size();
-            clientlog.delete(delList);
-        } catch (IOException e) {
-            e.printStackTrace();
-            total = -1;
         }
-        return total;
+        return logSb.toString();
     }
 
     private String getSaltStr(@NotNull String userId) {
