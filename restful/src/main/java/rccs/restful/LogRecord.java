@@ -4,13 +4,14 @@ public class LogRecord {
 
     private String aid;
     private String uid;
+    private int size;
     private String os;
     private String ver;
     private String ip;
     private long start;
     private long end;
 
-    public LogRecord(String aid, String uid, long start, long end) {
+    LogRecord(String aid, String uid, long start, long end) {
         this.aid = aid;
         this.uid = uid;
         this.start = start;
@@ -31,6 +32,14 @@ public class LogRecord {
 
     public void setUid(String uid) {
         this.uid = uid;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
     }
 
     public String getOs() {

@@ -2,5 +2,6 @@
     <property>
         <name>hbase.zookeeper.quorum</name>
         <value>172.31.32.41,172.31.32.50,172.31.32.65</value>
+        <!--<value>172.28.8.46,172.28.8.50,172.28.8.59</value>-->
     </property>
 </configuration>

@@ -4,6 +4,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+
+@CrossOrigin
 @RestController
 public class LogController {
 
@@ -12,6 +15,12 @@ public class LogController {
     @RequestMapping(value = "/log/{appKey}", method = RequestMethod.GET)
     public ResponseEntity<String> queryLogForApp(@PathVariable("appKey") String appKey) {
         String result = null;
+        try {
+            result = conn.getUserList(appKey);
+        } catch (IOException e) {
+//            result = "Runtime exception!";
+            e.printStackTrace();
+        }
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
@@ -28,7 +37,7 @@ public class LogController {
     public ResponseEntity<String> queryLogForUser(@PathVariable("appKey") String appKey,
                                                   @PathVariable("userId") String userId,
                                                   String start, String end) {
-        String result;
+        String result = null;
         try {
             if (start == null || end == null) {
                 result = conn.getLogInfo(appKey, userId);
@@ -36,7 +45,7 @@ public class LogController {
                 result = conn.getLogData(appKey, userId, start, end);
             }
         } catch (Exception e) {
-            result = "Runtime exception!";
+//            result = "Runtime exception!";
             e.printStackTrace();
         }
         return new ResponseEntity<>(result, HttpStatus.OK);

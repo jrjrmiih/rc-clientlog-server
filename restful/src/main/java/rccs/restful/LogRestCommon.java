@@ -1,10 +1,7 @@
 package rccs.restful;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.TimeZone;
 
 public class LogRestCommon {
