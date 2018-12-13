@@ -19,7 +19,7 @@ import java.util.zip.GZIPInputStream;
 public class HbaseConnection {
 
     private static final int BUFFER_LEN = 10 * 1024;
-    private static final int MAX_LOG_LENGTH = 1024 * 1024;
+    private static final int MAX_LOG_LENGTH = 4 * 1024 * 1024;
 
     private static final String T_CLIENTLOG = "clientlog";
     private static final String T_USER_RECORD = "user_record";
